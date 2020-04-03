@@ -1,0 +1,562 @@
+%*****************************************
+\chapter{Digital Filters}\label{ch:digital_filters}
+%*****************************************
+
+Conceived in general terms, a filter is a physical device for removing unwanted components of a mixture. In the technical field, a filter is a system designed to extract information from noisy measurements of a process. That is, the filter delivers an estimate of the variables of principal interest, which is why it may also be called an estimator. Filter theory is applied in diverse fields of science and technology, such as communications, radar, sonar, navigation, and biomedical engineering \cite{haykin2002adaptive}.
+
+In contrast to \emph{analogue filters} that consist of electronic circuits to attenuate unwanted frequencies in continuous-time signals and thus extract the useful signal, a \emph{digital filter} is a set of mathematical operations applied to a discrete-time signal in order to extract information about the hidden quantity of interest. A \emph{discrete-time} signal is a sequence of samples at equidistant time instants that represent the continuous-time signal with no loss, provided the sampling theorem is satisfied, according to which the sample frequency has to be greater than twice the highest frequency component of the continuous-time signal.
+
+Digital filters can be classified as \emph{linear} and \emph{non-linear}. If the quantity at the output of the filter is a \emph{linear} function of its input, that is, the filter function satisfies the superposition principle, the filter is said to be \emph{linear}. Otherwise, the filter is \emph{non-linear}.
+
+\section{The Filtering Problem}
+
+Consider, as an example involving filter theory, the continuous-time dynamical system depicted in Figure \ref{fig:state_estimation}. The desired state vector of the system, $\bm{x}(t)$, is usually hidden and can only be observed by indirect measurements $\bm{z}(t)$ that are a function of $\bm{x}(t)$ and subject to noise. Equally, the equation describing the evolution of the state $\bm{x}(t)$ is usually subject to system errors. These could be caused by, for instance, effects not accounted for in the model. The dynamical system may be an aircraft in flight, in which case the elements of the state vector are constituted by its position and velocity. The measuring system may be a tracking radar producing the observation vector $\bm{z}(t)$ over an interval $[0, T]$. The requirement of the filter is to deliver a reliable \emph{estimate} $\hat{\bm{x}}(t)$ of the actual state, by taking the measurement as well as a prior information into account.
+
+\tikzstyle{block} = [draw, rectangle, minimum height=3em, minimum width=6em]
+\tikzstyle{output} = [coordinate]
+\tikzstyle{pinstyle} = [pin edge={to-, thick, black}, align=center]
+
+\begin{figure}[t]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tikzpicture}[auto, thick, rounded corners=1pt, node distance=3cm,>=latex']
+    \node [block, align=center, 
+    	pin={[pinstyle]below:System \\ Errors}]
+    	(dynamical) {Dynamical \\ system};
+    \node [block, align=center, right of=dynamical, pin={[pinstyle]below:Measurement \\ errors}, node distance=4.5cm] (measuring) {Measuring \\ system};
+    \node [block, align=center, right of=measuring, pin={[pinstyle]below:Prior \\ information}, node distance=4.5cm] (estimator) {Estimator};
+    \node [output, right of=estimator] (output) {};
+    
+    \draw [->, align=center] (dynamical) -- node[name=x] {State \\ $\bm{x}(t)$} (measuring);
+    \draw [->, align=center] (measuring) -- node[name=y] {Observation \\ $\bm{z}(t)$} (estimator);
+    \draw [->, align=center] (estimator) -- node[name=y] {Estimate \\ of state \\ $\hat{\bm{x}}(t)$} (output);
+\end{tikzpicture}
+}
+\caption{Block diagram depicting the components involved in state estimation, from \cite{haykin2002adaptive}.} \label{fig:state_estimation}
+\end{figure}
+
+\section{The Wiener Filter}
+
+A statistical criterion, according to which the performance of a filter can be measured, is the mean-squared error. Consider the linear discrete-time filter with the impulse response $h_0, h_1, h_2, \dots$ depicted in Figure \ref{fig:filtering_problem}. At some discrete time $k$ it produces an output designated by $\hat{x}(k)$, which provides an estimate of a desired response denoted by $d(k)$. According to \citeauthor{haykin2002adaptive} \cite{haykin2002adaptive}, the essence of the filtering problem and the resulting requirement is summarised with the following statement:
+
+\begin{quote}``Design a linear discrete-time filter whose output $\hat{x}(k)$ provides an estimate of the desired response $d(k)$, given a set of input samples $z(0), z(1), z(2), \dots$, such that the mean-square value of the estimation error $e(k)$, defined as the difference between the desired response $d(k)$ and the actual response $\hat{x}(k)$, is minimized.''
+\end{quote}
+
+Assume a \emph{stationary} stochastic process with known statistical parameters as the mean and correlation functions of the useful signal and the unwanted additive noise. Then, the solution to this statistical optimisation problem is commonly known as the \emph{Wiener filter}. Yet, since the Wiener filter requires a priori information about the statistics of the data to be processed, it may not be optimum for \emph{non-stationary} processes. For such an environment, in which the statistics are time-varying, it needs a filter that constantly adapts its parameters to optimise its output.
+
+\tikzstyle{block} = [draw, rectangle, 
+    minimum height=2.6cm, minimum width=3.2cm]
+\tikzstyle{sum} = [draw, circle, node distance=4cm]
+\tikzstyle{input} = [coordinate]
+\tikzstyle{output} = [coordinate]
+\tikzstyle{error} = [coordinate]
+\tikzstyle{pinstyle} = [pin edge={to-,thin,black}]
+
+\begin{figure}[t]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tikzpicture}[auto, thick, node distance=3cm,>=latex']
+    
+\node [input, name=input] {};
+\node [block, rounded corners=1pt, align=left, right of=input, node distance=4.4cm] (filter) {Linear \\ discrete-time \\ filter \\ $h_0, h_1, h_2, \dots$};
+\node [sum, right of=filter, node distance=4.4cm] (sum) {$\sum$};	
+\node [output, right of=sum, node distance=2.8cm, name=output] {};
+\node [error, below of=sum, node distance=2.8cm, name=error] {};
+
+\draw [draw,->, align=left] (input) -- node [pos=0.29]{Input \\ $z(0), z(1), z(2), \dots$} (filter);
+\draw [draw,->, align=left] (filter) -- node {Output \\ $\hat{x}(k)$} node[pos=0.9, label={below:$-$}] {} (sum);
+\draw [draw,->, align=left] (output) -- node [label={above:Desired \\ response \\ $d(k)$}] {} node[pos=0.9] {$+$} (sum);
+\draw [draw,->, align=left] (sum) -- node {Estimation \\ error \\ $e(k)$} (error);
+
+\end{tikzpicture}
+}
+\caption{Block diagram representation of the statistical filtering problem, from \cite{haykin2002adaptive}.} \label{fig:filtering_problem}
+\end{figure}
+
+\section{Adaptive Filters}
+
+A possible approach to reduce the limitations associated with the Wiener filter for non-stationary processes is the `estimate and plug' procedure. The filter `estimates' the statistical parameters of the relevant signals and `plugs' them into a \emph{non-recursive} formula for computing the filter parameters. This procedure requires excessively elaborate and costly hardware for real-time operation \cite{haykin2002adaptive}. To overcome this disadvantage one may use an \emph{adaptive filter}, which is a self-designing system that relies, in contrast, on a \emph{recursive} algorithm. This allows the filter to perform satisfactorily, even if there is no complete knowledge of the relevant signal characteristics. Provided the variations in the  statistics of the input data are sufficiently slow, the algorithm can track time variations and is thus suitable for non-stationary environments. The algorithm starts from some predetermined set of initial conditions respecting the knowledge about the system. In a stationary environment it converges to the optimum Wiener solution in some statistical sense after successive iterations. The \emph{Kalman filter} is one such adaptive filter.
+
+Due to the fact that the parameters of an adaptive filter are updated each iteration, they become data dependent. The system does not obey the principles of superposition, which therefore makes the adaptive filter in reality a \emph{non-linear} system. However, an adaptive filter is commonly said to be \emph{linear} if its input-output map satisfies the superposition principle, as long as its parameters are held fixed. Otherwise it is said to be \emph{non-linear}.
+
+\section{The Kalman Filter}
+
+The \emph{Kalman filter} is a set of recursive mathematical equations that provide an efficient means to estimate the state of a \emph{linear} dynamic system, perturbed by additive white Gaussian noise, even when the precise nature of the modelled system is unknown. It incorporates knowledge of the system and measurement device dynamics, the statistical description of the system errors and measurement noise, and available information about initial conditions of the variables of interest, in order to produce an estimate of these variables, in a way that the mean of the squared error is minimised \cite{Maybeck79}. 
+
+The filter is named after Rudolf E. Kalman, who 1960 published his famous paper describing a recursive solution to the discrete-data linear filtering problem \cite{kalman_1960}. Since that time, the Kalman filter has been the subject of extensive research, due to a large extent to the advances in digital computing \cite{welch2014}. It finds applications in radar tracking, navigation, and orientation estimation, among others. \citeauthor{zarchan2009fundamentals} \cite{zarchan2009fundamentals} stated: ``With the possible exception of the fast Fourier transform, Kalman filtering is probably the most important algorithmic technique ever devised.''
+
+\subsection{An Introductory Example}
+
+The following introductory example from \citeauthor{Maybeck79} \cite{Maybeck79} is an illustrative description of the determination of a one-dimensional position to understand how the Kalman filter works. Suppose you are lost at sea during the night and take a star sighting to determine your approximate position at time $t_1$ to be $z_1$. Your location estimate is, due to inherent measurement device inaccuracies and human error, somewhat uncertain, and thus assumed to be associated with a standard deviation $\sigma_{z_1}$. The conditional probability of $x(t_1)$, your actual position at time $t_1$, conditioned on the observed value $z_1$, is depicted in Figure \ref{fig:measurement_z1}. The best estimate of your position, based on this conditional probability density, is
+
+\begin{equation}
+  \hat{x}(t_1)=z_1\,,
+\end{equation}
+
+\noindent
+and the variance of the error in the estimate is
+
+\begin{equation}
+  \sigma^2_x(t_1)=\sigma^2_{z_1}\,.
+\end{equation}
+
+\begin{figure}
+\centering
+\begin{tikzpicture}[pile/.style={->, >=stealth'}]
+
+\draw[very thick] plot[samples=200, smooth, domain=-.5:8.5] (\x, {0.2+5/(1.3*sqrt(2*pi))*exp(-((\x-4)^2)/(2*1.3^2))});
+  \draw[->] (-1,0) -- (9,0) node[below, pos=0.98] {$x$};
+  \draw[->] (0,-0.5) -- (0,3) node[right] {$f_{x(t_1)|z(t_1)}(x|z_1)$};
+  \draw[-] (4,0) -- (4,1.74) node[pos=-0.15] {$z_1$};
+  \draw[pile, style={->, >=stealth', shorten <=0pt, shorten
+    >=0pt}] (4,0.8) -- (2.26,0.8) node[below, pos=0.5] {$\sigma_{z_1}$};
+  
+\end{tikzpicture}
+\caption{Conditional probability density of the position based on measurement value $z_1$, from \cite{Maybeck79}.} \label{fig:measurement_z1}
+\end{figure}
+
+Right after you, say a trained navigator friend takes an independent fix at time $t_2 \cong t_1$, so that the true position has not changed at all. He obtains a measurement $z_2$ with a variance $\sigma^2_{z_2}$, which is somewhat smaller than yours, since he has a higher skill. Figure \ref{fig:measurement_z2} depicts the conditional probability density of your position at time $t_2$, based only on the measurement value $z_2$. Combining these data, your position at time $t_2 \cong t_1$, $x(t_2)$, given both $z_1$ and $z_2$, is then a Gaussian density with mean $\mu$ and variance $\sigma^2$, as indicated in Figure \ref{fig:combination}, with
+
+\begin{figure}
+\centering
+\begin{tikzpicture}[pile/.style={->, >=stealth'}]
+
+\draw[thick, dashed] plot[samples=200, smooth, domain=-.5:8.5] (\x, {0.2+5/(1.3*sqrt(2*pi))*exp(-((\x-4)^2)/(2*1.3^2))});
+\draw[very thick] plot[samples=200, smooth, domain=3.9:8.1] (\x, {0.1+5/(0.6*sqrt(2*pi))*exp(-((\x-6)^2)/(2*0.6^2))});
+  \draw[->] (-1,0) -- (9,0) node[below, pos=0.98] {$x$};
+  \draw[->] (0,-0.5) -- (0,4) node[right] {$f_{x(t_2)|z(t_2)}(x|z_2)$};
+  \draw[dashed] (4,0) -- (4,1.74) node[pos=-0.15] {$z_1$};
+  \draw[pile, style={dashed, ->, >=stealth', shorten <=0pt, shorten
+    >=0pt}] (4,0.8) -- (2.26,0.8) node[below, pos=0.5] {$\sigma_{z_1}$};
+  \draw[-] (6,0) -- (6,3.43) node[pos=-0.08] {$z_2$};
+    \draw[pile, style={->, >=stealth', shorten <=0pt, shorten
+    >=0pt}] (6,2) -- (6.62,2) node[below, pos=0.5] {$\sigma_{z_2}$};
+  
+\end{tikzpicture}
+\caption{Conditional probability density of the position based on measurement value $z_2$ alone, from \cite{Maybeck79}.} \label{fig:measurement_z2}
+\end{figure}
+
+\begin{figure}
+\centering
+\begin{tikzpicture}[pile/.style={->, >=stealth'}]
+
+
+\draw[thick, dashed] plot[samples=200, smooth, domain=-.5:8.5] (\x, {0.2+5/(1.3*sqrt(2*pi))*exp(-((\x-4)^2)/(2*1.3^2))});
+\draw[thick, dashed] plot[samples=200, smooth, domain=3.9:8.1] (\x, {0.1+5/(0.6*sqrt(2*pi))*exp(-((\x-6)^2)/(2*0.6^2))});
+\draw[very thick] plot[samples=200, smooth, domain=3.8:6.2] (\x, {0.05+5/(0.35*sqrt(2*pi))*exp(-((\x-5)^2)/(2*0.35^2))});
+  \draw[->] (-1,0) -- (9,0) node[below, pos=0.98] {$x$};
+  \draw[->] (0,-0.5) -- (0,6) node[right] {$f_{x(t_2)|z(t_2)}(x|z_2)$};
+  \draw[dashed] (4,0) -- (4,1.74) node[pos=-0.15] {$z_1$};
+  \draw[pile, style={dashed, ->, >=stealth', shorten <=0pt, shorten
+    >=0pt}] (4,0.8) -- (2.26,0.8) node[below, pos=0.5] {$\sigma_{z_1}$};
+  \draw[dashed] (6,0) -- (6,3.43) node[pos=-0.08] {$z_2$};
+    \draw[pile, style={dashed, ->, >=stealth', shorten <=0pt, shorten
+    >=0pt}] (6,2) -- (6.61,2) node[below, pos=0.5] {$\sigma_{z_2}$};
+  \draw[-] (5,0) -- (5,5.75) node[pos=-0.05] {$\mu$};
+    \draw[pile, style={->, >=stealth', shorten <=0pt, shorten
+    >=0pt}] (5,3.5) -- (4.67,3.5) node[below, pos=0.5] {$\sigma$};
+  
+\end{tikzpicture}
+\caption{Conditional probability density of the position based on data $z_1$ and $z_2$, from \cite{Maybeck79}.} \label{fig:combination}
+\end{figure}
+
+
+\begin{equation}\label{eq:mu}
+  \mu=z_1\frac{\sigma^2_{z_2}}{\sigma^2_{z_1}+\sigma^2_{z_2}}+z_2\frac{\sigma^2_{z_1}}{\sigma^2_{z_1}+\sigma^2_{z_2}}
+\end{equation}
+
+\noindent
+and
+
+\begin{equation}
+  \frac{1}{\sigma^2}=\frac{1}{\sigma^2_{z_1}}+\frac{1}{\sigma^2_{z_2}}\,.
+\end{equation}
+
+\noindent
+The uncertainty in your estimate of position has been decreased because $\sigma$ is less than either $\sigma^2_{z_1}$ or $\sigma^2_{z_2}$. Even if $\sigma_{z_1}$ was very large, the variance of the estimate is less than $\sigma_{z_2}$, which means that even poor quality data increases the precision of the filter output. The best estimate, given this density, is
+
+\begin{equation}\label{eq:filter_output}
+  \hat{x}(t_2)=\mu\,,
+\end{equation}
+
+\noindent
+with an associated error variance $\sigma^2$.
+
+Having a closer look at the form of $\mu$ in Equation \ref{eq:mu}, one notices that it makes good sense. If the measurements were of equal precision, meaning $\sigma_{z_1}=\sigma_{z_2}$, the optimal estimate is simply the average of both measurements, as would be expected. If $\sigma_{z_1}$ is larger than $\sigma_{z_2}$, the equation weights $z_2$ more heavily than $z_1$.
+
+Equation \ref{eq:filter_output} for the filter output can be written as
+
+\begin{equation}\label{eq:x2_hat}
+\begin{split}
+  \hat{x}(t_2) & =z_1\frac{\sigma^2_{z_2}}{\sigma^2_{z_1}+\sigma^2_{z_2}}+z_2\frac{\sigma^2_{z_1}}{\sigma^2_{z_1}+\sigma^2_{z_2}} \\
+  & =z_1+\frac{\sigma^2_{z_1}}{\sigma^2_{z_1}+\sigma^2_{z_2}}[z_2-z_1]\,,
+\end{split}
+\end{equation}
+
+\noindent
+or in a form that is used in Kalman filter implementations, with $\hat{x}(t_1)=z_1$, as
+
+\begin{equation}\label{eq:x2_hat_kalman}
+  \hat{x}(t_2) = \hat{x}(t_1) + K(t_2)[z_2-\hat{x}(t_1)]\,,
+\end{equation}
+
+\noindent
+where
+
+\begin{equation}\label{}
+  K(t_2) = \frac{\sigma^2_{z_1}}{\sigma^2_{z_1}+\sigma^2_{z_2}}\,.
+\end{equation}
+
+\noindent
+These equations represent the `predictor-corrector' structure of the Kalman filter. A prediction of the value that the desired variables and the measurements will have at the next measurement time is made, based on all previous information. Then the difference between the measurement and its predicted value is used to correct the prediction of the desired variables. According to Equation \ref{eq:x2_hat_kalman} the optimal estimate at time $t_2$, that is $\hat{x}(t_2)$, is equal to $\hat{x}(t_1)$, the best prediction of its value before $z_2$ is taken, plus a correction term of an optimal weighting value times the difference between $z_2$ and the best prediction of it before the measurement is actually taken.
+
+To incorporate dynamics into the model, suppose you travel for some time before taking another measurement. The best model you have for your motion may be of the form
+
+\begin{equation}\label{}
+  \frac{dx}{dt} = u + w\,,
+\end{equation}
+
+\noindent
+where $u$ is a nominal velocity and $w$ is a noise term, representing the uncertainty in your knowledge of the actual velocity due to disturbances and effects not accounted for in the simple first order equation. It will be modelled as white Gaussian noise with a mean of zero and variance of $\sigma^2_w$.
+
+\begin{figure}
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tikzpicture}[pile/.style={->, >=stealth'}]
+
+  \draw[very thick] plot[samples=200, smooth, domain=0.8:3.2] (\x, {0.05+5/(0.35*sqrt(2*pi))*exp(-((\x-2)^2)/(2*0.35^2))});
+  \draw[very thick] plot[samples=200, smooth, domain=2.2:7.8] (\x, {0.2+5/(0.7*sqrt(2*pi))*exp(-((\x-5)^2)/(2*0.7^2))});
+  \draw[very thick] plot[samples=200, smooth, domain=4.5:11.5] (\x, {0.4+5/(1.3*sqrt(2*pi))*exp(-((\x-8)^2)/(2*1.3^2))});
+
+  \draw[->] (-0.5,0) -- (12,0) node[below, pos=0.98] {$x$};
+  \draw[->] (0,-0.5) -- (0,6.5) node[right] {$f_{x(t)|z(t_1), z(t_2)}(x|z_1, z_2)$};
+  \draw[-] (8,0) -- (8,1.94) node[pos=-0.15] {$\hat{x}^-(t_3)$};
+  \draw[pile, style={->, >=stealth', shorten <=0pt, shorten
+    >=0pt}] (8,0.8) -- (10.07,0.8) node[below, pos=0.5] {$\sigma^-_x(t_3)$};
+  \draw[-] (5,0) -- (5,3.07) node[pos=-0.09] {$\hat{x}(t)$};
+  \draw[pile, style={->, >=stealth', shorten <=0pt, shorten
+    >=0pt}] (5,2) -- (5.65,2) node[right, pos=0.98] {$\sigma_x(t)$};
+  \draw[-] (2,0) -- (2,5.75) node[pos=-0.05] {$\hat{x}(t_2)$};
+  \draw[pile, style={->, >=stealth', shorten <=0pt, shorten
+    >=0pt}] (2,3.5) -- (2.33,3.5) node[right, pos=0.95] {$\sigma_x(t_2)$};
+ 
+  \draw[pile, style={dashed, ->, >=stealth', shorten <=0pt, shorten
+    >=0pt}] (2,4) -- (8,4) node[above, pos=0.75] {$u$};
+  
+\end{tikzpicture}
+}
+\caption{Propagation of conditional probability density, from \cite{Maybeck79}.} \label{fig:propagation}
+\end{figure}
+
+The conditional density of the position at time $t_2$, given $z_1$ and $z_2$, was previously derived. Figure \ref{fig:propagation} shows graphically how the density travels along the $x$-axis as time progresses. It starts at the best estimate and moves according to the above mentioned model of dynamics. Due to the constant addition of uncertainty over time it spreads out. Thus, as the variance increases, you become less sure of your position. The Gaussian density $f_{x(t_3)|z(t_1), z(t_2)}(x|z_1, z_2)$ can be expressed mathematically by its mean and variance given by
+
+\begin{equation}\label{eq:system_model}
+  \hat{x}^-(t_3)=\hat{x}(t_2)+u[t_3-t_2]\,,
+\end{equation}
+
+\begin{equation}\label{eq:variance_predicted}
+  \sigma^{2-}_x(t_3)=\sigma^2_x(t_2)+\sigma^2_w[t_3-t_2]\,,
+\end{equation}
+
+\noindent
+where the superscript $^-$ denotes the prediction of $\hat{x}$ and $\sigma^{2}_x$, respectively. Before the measurement is taken at time $t_3$, $\hat{x}^-(t_3)$ is the optimal prediction of the location at $t_3$, associated with the variance $\sigma^{2-}_x(t_3)$ in this prediction.
+
+Now a measurement $z_3$ with an assumed variance $\sigma^2_{z_3}$ is taken. As before, its conditional probability density is combined with the density with mean $\hat{x}^-(t_3)$ and variance $\sigma^{2-}_x(t_3)$, to yield a Gaussian density with mean
+
+\begin{equation}\label{eq:estimation_kalman}
+  \hat{x}(t_3) = \hat{x}^-(t_3) + K(t_3)[z_3-\hat{x}^-(t_3)]
+\end{equation}
+
+\noindent
+and variance
+
+\begin{equation}\label{eq:variance_kalman}
+  \sigma^2_x(t_3) = \sigma^{2-}_x(t_3)-K(t_3)\sigma^{2-}_x(t_3)\,,
+\end{equation}
+
+\noindent
+where the gain $K(t_3)$ is given by
+
+\begin{equation}\label{eq:gain_kalman}
+  K(t_3) = \frac{\sigma^{2-}_x(t_3)}{\sigma^{2-}_x(t_3)+\sigma^2_{z_3}}\,.
+\end{equation}
+
+Observing the form of Equation \ref{eq:gain_kalman} the reasonableness of the filter structure becomes obvious. If the variance of the measurement noise $\sigma^2_{z_3}$ is large, then $K(t_3)$ is small, meaning that little confidence is put in a very noisy measurement and that it is weighted lightly. For $\sigma^2_{z_3}\rightarrow\infty$, $K(t_3)$ becomes zero, and $\hat{x}(t_3)$ equals $\hat{x}^-(t_3)$. Thus, an infinitely noisy measurement is totally ignored. Likewise, if the dynamical system noise variance $\sigma^2_w$ is large, then according to Equation \ref{eq:variance_predicted}, $\sigma^{2-}_x(t_3)$ will be large, and so will be $K(t_3)$. Therefore, the measurement is weighted heavily, in case you are not very certain about the output of the system model within the filter structure. In the limit as $\sigma^2_w \rightarrow\infty$, $\sigma^{2-}_x(t_3) \rightarrow\infty$, and $K(t_3) \rightarrow1$, so Equation \ref{eq:filter_output} yields
+
+\begin{equation}\label{eq:prediction_kalman}
+  \hat{x}(t_3) = \hat{x}(t^-_3) + 1 \cdot [z_3-\hat{x}(t^-_3)] = z_3\,.
+\end{equation}
+
+\noindent
+That means that in the limit of absolutely no confidence in the system model output, solely the new measurement is taken as the optimal estimate. Finally, if you are absolutely sure of your estimate before $z_3$ becomes available, $\sigma^{2-}_x(t_3)$ would become zero, and so would $K(t_3)$, which means that the measurements would be left disregarded. 
+
+Extending Equations \ref{eq:system_model}, \ref{eq:variance_predicted}, \ref{eq:estimation_kalman}, \ref{eq:variance_kalman}, and \ref{eq:gain_kalman} to the vector case, and allowing time varying parameters in the system and noise description leads to the general Kalman filter equations. A complete mathematical derivation can be found in \citeauthor{haykin2002adaptive} \cite{haykin2002adaptive}.
+
+\subsection{Formulation of the Kalman Filter Equations} \label{sec:Kalman_equations}
+
+Let $\bm{x}_k \in \mathbb{R}^n$ be the state vector of a discrete-time controlled process governed by the \emph{linear} stochastic difference equation 
+
+\begin{equation}\label{eq:time_dynamical_system_plant}
+  \bm{x}_k = \bm{\Phi}_{k-1}\bm{x}_{k-1}+\bm{B}_{k-1}\bm{u}_{k-1}+\bm{w}_{k-1}
+\end{equation}
+
+\noindent
+and $\bm{z}_k \in \mathbb{R}^m$ the observation or measurement vector of this process, given by
+
+\begin{equation}\label{eq:time_dynamical_system_measurement}
+  \bm{z}_k = \bm{H}_{k}\bm{x}_{k}+\bm{v}_{k}\,,
+\end{equation}
+
+\noindent
+where the index $k \in \mathbb{N}^0$ denotes discrete time normalised to the sampling interval. The $n\times1$ vector $\bm{w}_k$ and the $m\times1$ vector $\bm{v}_k$ represent the process noise and the measurement noise, respectively, modelled as zero-mean, Gaussian white noise
+
+\begin{equation}\label{eq:process_noise}
+  \bm{w}_{k} \sim \mathcal{N}(0,\bm{Q}_k)\,,
+\end{equation}
+
+\begin{equation}\label{eq:measurement_noise}
+  \bm{v}_{k} \sim \mathcal{N}(0,\bm{R}_k)\,,
+\end{equation}
+ 
+\noindent
+with the process noise covariance matrix $\bm{Q}_k$ and the measurement noise covariance matrix $\bm{R}_k$. The $n\times n$ state transition matrix $\bm{\Phi}_{k-1}$ in Equation \ref{eq:time_dynamical_system_plant} relates the state at the previous time step $k-1$ to the state at the current step $k$. The $n\times l$ matrix $\bm{B}_{k-1}$ relates the known, optional control input $\bm{u}_{k-1} \in \mathbb{R}^l$ to the state $\bm{x}_k$. Finally, the $m\times n$ measurement matrix $\bm{H}_{k}$ in Equation \ref{eq:time_dynamical_system_measurement} relates the state $\bm{x}_k$ to the measurement $\bm{z}_k$. Both noise processes are assumed to be uncorrelated. The process noise might not always have a physical meaning. However, it represents the fact that the model of the real world is not precise. The process and measurement noise covariance matrices are related to the respective noise vectors according to
+
+\begin{equation}
+  \bm{Q}_k = \mbox{E}[\bm{w}_{k} \bm{w}^T_{k}]\,,
+\end{equation}
+
+\begin{equation}
+  \bm{R}_k = \mbox{E}[\bm{v}_{k} \bm{v}^T_{k}]\,,
+\end{equation}
+
+\noindent
+where E denotes the expected value.
+
+The Kalman filter solves the problem of estimating the state $\bm{x}_k$ of the given linear stochastic system, minimising the weighted mean-squared error. This problem is called the \emph{linear quadratic Gaussian} estimation problem; the dynamic system is linear, the performance cost function is quadratic, and the random process is Gaussian.
+
+We define the vector $\hat{\bm{x}}^-_k \in \mathbb{R}^n$ as the \emph{a priori} state estimate representing knowledge of the process prior to step $k$ and $\hat{\bm{x}}_k \in \mathbb{R}^n$ as the \emph{a posteriori} state estimate at step $k$ given the measurement $\bm{z}_k$:
+
+\begin{equation}\label{eq:apriori_estimate}
+  \hat{\bm{x}}^-_k = \bm{\Phi}_{k-1}\hat{\bm{x}}_{k-1}+\bm{B}_{k-1}\bm{u}_{k-1}\,,
+\end{equation}
+
+\begin{equation}\label{eq:aposteriori_estimate}
+  \hat{\bm{x}}_k = \hat{\bm{x}}^-_k + \bm{K}_{k}[\bm{z}_k-\bm{H}_{k}\hat{\bm{x}}^-_k]\,.
+\end{equation}
+
+\noindent
+The term $[\bm{z}_k-\bm{H}_{k}\hat{\bm{x}}^-_k]$ is called the measurement \emph{innovation} or \emph{residual}. It reflects the discordance between the predicted measurement $\bm{H}_{k}\hat{\bm{x}}^-_k$ and the actual measurement $\bm{z}_k$. The $n\times m$ matrix $\bm{K}_{k}$ is termed the Kalman gain and is given by
+
+\begin{equation}\label{eq:Kalman_gain}
+  \bm{K}_{k} = \bm{P}^-_k \bm{H}^T_k[\bm{H}_k \bm{P}^-_k \bm{H}^T_k + \bm{R}_k]^{-1}\,,
+\end{equation}
+
+\noindent
+with
+
+\begin{equation}\label{eq:apriori_error_cov}
+  \bm{P}^-_{k} = \bm{\Phi}_{k-1} \bm{P}_{k-1} \bm{\Phi}^T_{k-1} + \bm{Q}_{k-1}
+\end{equation}
+
+\noindent
+and
+
+\begin{equation}\label{eq:aposteriori_error_cov}
+  \bm{P}_{k} = [\bm{I}_n - \bm{K}_{k}\bm{H}_{k}]\bm{P}^-_{k}\,.
+\end{equation}
+
+\noindent
+Figure \ref{fig:kalman_filter_model} illustrates the relation of the Kalman filter to the discrete-time dynamical system with $\bm{u}_{k}=0$, for the sake of simplicity, whereby $z^{-1}$ denotes the unit-delay and $\bm{I}_n$ the $n\times n$ identity matrix.
+
+\tikzstyle{block} = [draw, rectangle, minimum height=0.8cm, minimum width=0.8cm]
+\tikzstyle{sum} = [draw, circle]
+\tikzstyle{output} = [coordinate]
+\tikzstyle{input} = [coordinate]
+
+\begin{figure}
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tikzpicture}[auto, thick, node distance=1.5cm,>=latex']
+	
+	\node [sum] (sum1) {$\sum$};
+	\node [input, above of=sum1] (w) {};
+    \node [block, align=center, 
+    	right of=sum1, node distance=3cm] (H) {$\bm{H}_k$};
+    \node [block, align=center, below of=sum1, node distance=1.8cm] (phi) {$\bm{\Phi}_{k-1}$};
+    \node [sum, right of=H, node distance=1.5cm] (sum2) {$\sum$};
+    \node [sum, right of=sum2, node distance=1.8cm] (sum3) {$\sum$};
+    \node [input, above of=sum2] (v) {};
+    \node [block, align=center, 
+    	right of=sum3, node distance=1.5cm] (K) {$\bm{K}_k$};
+    \node [block, align=center, below of=K, node distance=1.8cm] (H1) {$\bm{H}_k$};
+    \node [block, align=center, right of=H1, node distance=2.5cm] (phi1) {$\bm{\Phi}_{k-1}$};
+    \node [block, align=center, right of=phi1, node distance=2.2cm] (delay1) {$z^{-1_{ }}\bm{I}_n$};
+    \node [sum, right of=K, node distance=1.5cm] (sum4) {$\sum$};
+    \node [output, right of=sum4, node distance=4.0cm] (out) {};
+    
+    
+    \draw [->] (sum1) -- node[] {$\bm{x}_k$} node[name=x_k, pos=0.8] {} (H);
+    \node [block, below of=x_k, node distance=1.93cm] (delay) {$z^{-1_{ }}\bm{I}_n$};
+    \draw [->, align=center] (delay) -- node [label={below:$\bm{x}_{k-1}$}, pos=0.4] {} (phi);
+    \draw [->] (phi) -- node[pos=0.87] {$+$} (sum1);
+    \draw [->] (H) -- node[label={below:$+$}, pos=0.77] {} (sum2);
+    \draw [->] (sum2) -- node[] {$\bm{z}_k$} node[label={below:$+$}, pos=0.79] {} (sum3);
+    \draw [->] (sum3) -- node[label={below:$+$}, pos=0.65] {} (K);
+    \draw [->] (w) -- node [label={left:$\bm{w}_{k-1}$}, pos=0.29]{} node[label={left:$+$}, pos=0.88] {} (sum1);
+    \draw [->] (v) -- node [label={left:$\bm{v}_{k}$}, pos=0.29]{} node[label={left:$+$}, pos=0.88] {} (sum2);
+    \draw [->] (x_k) -- (delay);
+    \draw [->] (H1) -| node[pos=0.89] {$-$} (sum3);
+    \draw [->] (K) -- node[label={below:$+$}, pos=0.77] {} (sum4);
+    \draw [->] (phi1) -- node[pos=0.27, name=h-phi] {} node[] {$\hat{\bm{x}}^-_k$} (H1);
+    \draw [->] (delay1) -- node[] {$\hat{\bm{x}}_{k-1}$} node[] {} (phi1);
+     \draw [->] (h-phi) -- node[pos=0.90] {$+$} (sum4);
+     \draw [->] (sum4) -- node[pos=0.77, name=xk_hat] {$\hat{\bm{x}}_k$} (out);
+     \draw [->] (xk_hat) -- (delay1);
+     
+\end{tikzpicture}
+}
+
+\caption{Block diagram depicting the relation between a discrete-time dynamical system, its observation, and the Kalman filter.} \label{fig:kalman_filter_model}
+\end{figure}
+
+The Kalman filter equations can be divided into two groups: \emph{time update} Equations \ref{eq:apriori_estimate}, \ref{eq:apriori_error_cov} and \emph{measurement update} Equations \ref{eq:aposteriori_estimate} , \ref{eq:Kalman_gain}, and \ref{eq:aposteriori_error_cov}, as seen in Figure \ref{fig:kalman_filter_cycle}, which shows the `predict and correct' behaviour of the filter algorithm. After an initialisation of the parameters, the \emph{time update} and \emph{measurement update} steps are repeated recursively every time step.
+
+
+\tikzstyle{block} = [draw, rectangle, thick, 
+    minimum height=1.5cm, minimum width=8cm]
+\tikzstyle{output} = [coordinate]
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[auto, rounded corners=1pt, node distance=4cm,>=latex']
+    
+\node [block, align=center] (init) {Initialisation of parameters \\[3mm] $\bm{P}_{0}, \bm{x}_{0}, \bm{H}_{0}, \bm{\Phi}_{0}, \bm{Q}_{0}, \bm{R}_{0},$};
+\node [block, align=center, below of=init, node distance=3.2cm] (predict) {\emph{Time update} \\[3mm] Compute \emph{a priori} estimate: \\ $\hat{\bm{x}}^-_k = \bm{\Phi}_{k-1}\hat{\bm{x}}_{k-1}+\bm{B}_{k-1}\bm{u}_{k-1}$ \\ Compute \emph{a priori} error covariance: \\ $\bm{P}^-_{k} = \bm{\Phi}_{k-1} \bm{P}_{k-1} \bm{\Phi}^T_{k-1} + \bm{Q}_{k-1}$};
+\node [block, align=center, below of=predict, node distance=4.3cm] (update) {\emph{Measurement update} \\[3mm] Compute Kalman gain: \\ $\bm{K}_{k} = \bm{P}^-_k \bm{H}^T_k[\bm{H}_k \bm{P}^-_k \bm{H}^T_k + \bm{R}_k]^{-1}$ \\ Compute \emph{a posteriori} estimate: \\ $\hat{\bm{x}}_k = \hat{\bm{x}}^-_k + \bm{K}_{k}[\bm{z}_k-\bm{H}_{k}\hat{\bm{x}}^-_k]$ \\ Update error covariance: \\ $\bm{P}_{k} = [\bm{I}_n - \bm{K}_{k}\bm{H}_{k}]\bm{P}^-_{k}$};
+\node [output, below of=update, node distance=3cm, name=output] {Output};
+\node [output, below of=update, node distance=2.5cm, name=help1] {};
+\node [output, right of=help1, node distance=4.7cm, name=help2] {};
+\node [output, below of=init, node distance=1.16cm, name=help4] {};
+\node [output, right of=help4, node distance=4.7cm, name=help3] {};
+
+\draw [draw,-stealth, thick, align=left] (init) -- (predict);
+\draw [draw,-stealth, thick, align=left] (predict) -- (update);
+\draw [draw,-stealth, thick, align=left] (update) -- node [label={left:Output}]{} (output);
+\draw [draw,-stealth, thick] (help1) -- (help2) -- (help3) -- (help4);
+\end{tikzpicture}
+\caption{Operation cycle of the Kalman filter algorithm illustrating `predict and correct' behaviour.} \label{fig:kalman_filter_cycle}
+\end{figure}
+
+
+\subsection{The Extended Kalman Filter}
+
+Up to this point the Kalman filter has solved the filtering problem for \emph{linear} time-dynamical systems. One may extend the Kalman filter to systems with state dynamics governed by \emph{non-linear} state transformations
+
+\begin{equation}\label{eq:time_dynamical_system_plant_extended}
+  \bm{x}_k = \bm{\phi}_{k-1}(\bm{x}_{k-1}, \bm{u}_{k-1})+\bm{w}_{k-1}, \quad \bm{w}_{k} \sim \mathcal{N}(0,\bm{Q}_k)\,,
+\end{equation}
+
+\noindent
+and/or a \emph{non-linear} transformation from state variables to measurement variables
+
+\begin{equation}\label{eq:time_dynamical_system_measurement_extended}
+  \bm{z}_k = \bm{h}_{k}(\bm{x}_{k})+\bm{v}_{k}, \quad \bm{v}_{k} \sim \mathcal{N}(0,\bm{R}_k)\,.
+\end{equation}
+
+\noindent
+The \emph{functional} $\bm{\phi}_{k-1}$ denotes the \emph{non-linear} transition matrix function that may be time varying. It relates the state at the previous time step $k-1$ to the current time step $k$, depending on the exogenous control input $\bm{u}_{k-1}$. The functional $\bm{h}_{k}$ denotes a \emph{non-linear} measurement matrix function that relates the state $\bm{x}_{k}$ to the measurement $\bm{z}_k$ and is possibly time varying, too.
+
+Some non-linear problems can be deemed \emph{quasilinear}, which means that the variation of the non-linear functionals $\bm{\phi}_k$ and $\bm{h}_k$ are predominantly linear about the value $\bm{x}_0$. That is,
+
+\begin{equation}\label{eq:linear_phi}
+  \bm{\phi}_{k}(\bm{x}_0 + d \bm{x}, \bm{u}) \approx \bm{\phi}_{k}(\bm{x}_0, \bm{u}) + d \bm{x} \left. \frac{\partial \bm{\phi}_{k}(\bm{x}, \bm{u})}{\partial \bm{x}} \right|_{\bm{x} = \bm{x}_0}\,,
+\end{equation}
+
+\begin{equation}\label{eq:linear_h}
+  \bm{h}_{k}(\bm{x}_0 + d \bm{x}) \approx \bm{h}_{k}(\bm{x}_0) + d \bm{x} \left. \frac{\partial \bm{h}_{k}(\bm{x})}{\partial \bm{x}} \right|_{\bm{x} = \bm{x}_0}\,,
+\end{equation}
+
+\noindent
+which requires that $\bm{\phi}_k$ and $\bm{h}_k$ are differentiable at $\bm{x}_0$.
+
+Through a \emph{linearisation} of the state-space model of Equations \ref{eq:time_dynamical_system_plant_extended} and \ref{eq:time_dynamical_system_measurement_extended} at each time instant around the most recent state estimate, the standard Kalman filter equation from Section \ref{sec:Kalman_equations} can be applied. The filter resulting from a \emph{linear approximation} of the state transitions and the relation of the measurement to the respective state is referred to as the \emph{extended Kalman filter}.
+
+The linearisation of the functionals $\bm{\phi}_k$ and $\bm{h}_k$ is given by their respective Jacobian matrices  
+
+\begin{equation}\label{eq:Phi_first_order}
+  \bm{\Phi}^{[1]}_{k-1} =  \left. \frac{\partial \bm{\phi}_{k-1}(\bm{x}, \bm{u})}{\partial \bm{x}} \right|_{\bm{x}=\hat{\bm{x}}_{k-1}, \bm{u} = \bm{u}_{k-1}} \,,
+\end{equation}
+and
+\begin{equation}\label{eq:H_first_order}
+  \bm{H}^{[1]}_{k} = \left. \frac{\partial \bm{h}_{k}(\bm{x})}{\partial \bm{x}} \right|_{\bm{x}=\hat{\bm{x}}_{k}} \,.
+\end{equation}
+
+\noindent
+The $ij$-th entry of $\bm{\Phi}^{[1]}_{k-1}$ is equal to the partial derivative of the $i$-th component of $\bm{\phi}_{k-1}(\bm{x})$ with respect to the $j$-th component of $\bm{x}$. The derivatives are evaluated at $\bm{x}=\hat{\bm{x}}_{k-1}, \bm{u} = \bm{u}_{k-1}$. Likewise, the $ij$-th entry of $\bm{H}^{[1]}_{k}$ is equal to the partial derivative of the $i$-th component of $\bm{h}_{k}(\bm{x})$ with respect to the $j$-th component of $\bm{x}$. The derivatives are evaluated at $\bm{x}=\hat{\bm{x}}_{k}$. The superscript $^{[1]}$ denotes the \emph{first-order} approximation.
+
+
+Similar to Equation \ref{eq:apriori_estimate}, the predicted state estimate is given by
+
+\begin{equation}\label{eq:apriori_estimate_extended}
+  \hat{\bm{x}}^{-}_k = \bm{\phi}_{k-1}(\bm{x}_{k-1}, \bm{u}_{k-1})\,,
+\end{equation}
+
+\noindent
+and the predicted measurement by
+
+\begin{equation}\label{eq:predicted_measurement_extended}
+  \hat{\bm{z}}_k = \bm{h}_{k}(\hat{\bm{x}}^{-}_{k})\,.
+\end{equation}
+
+\noindent
+The \emph{a posteriori} estimate is then, conditioned on the actual measurement, 
+
+\begin{equation}\label{eq:aposteriori_estimate_extended}
+  \hat{\bm{x}}_k = \hat{\bm{x}}^-_k + \bm{K}_{k}[\bm{z}_k-\hat{\bm{z}}_k]\,.
+\end{equation}
+
+\noindent
+The corresponding \emph{a priori} covariance matrix $\bm{P}^-_{k}$, the Kalman gain $\bm{K}_{k}$, and the \emph{a posteriori} covariance matrix $\bm{P}_{k}$ are equal to Equations \ref{eq:Kalman_gain}, \ref{eq:apriori_error_cov}, and \ref{eq:aposteriori_error_cov} in Section \ref{sec:Kalman_equations}. They are reproduced here with the linear approximation of the state transition and measurement matrices for convenience of presentation:
+
+\begin{equation}\label{eq:apriori_error_cov_extended}
+  \bm{P}^-_{k} = \bm{\Phi}^{[1]}_{k-1} \bm{P}_{k-1} \bm{\Phi}^{[1]T}_{k-1} + \bm{Q}_{k-1}\,,
+\end{equation}
+
+\begin{equation}\label{eq:Kalman_gain_extended}
+  \bm{K}_{k} = \bm{P}^-_k \bm{H}^{[1]T}_k[\bm{H}^{[1]}_k \bm{P}^-_k \bm{H}^{[1]T}_k + \bm{R}_k]^{-1}\,,
+\end{equation}
+
+\begin{equation}\label{eq:aposteriori_error_cov_extended}
+  \bm{P}_{k} = [\bm{I}_n - \bm{K}_{k}\bm{H}^{[1]}_{k}]\bm{P}^-_{k}\,.
+\end{equation}
+
+Figure \ref{fig:extended_kalman_filter_cycle} illustrates the `predict and correct' behaviour of the extended Kalman filter algorithm. The \emph{time update} and \emph{measurement update} steps are repeated recursively every time step, after an initialisation of the parameters, similar to the classical Kalman filter algorithm. In addition, the Jacobian matrices have to be computed, in order to linearise the state-space model at each time instant around the most recent state estimate.
+
+\tikzstyle{block} = [draw, rectangle, thick, 
+    minimum height=1.5cm, minimum width=8cm]
+\tikzstyle{output} = [coordinate]
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[auto, rounded corners=1pt, node distance=5cm,>=latex']
+    
+\node [block, align=center] (init) {Initialisation of parameters \\[3mm] $\bm{x}_{0}, \bm{P}_{0}, \bm{Q}_{0}, \bm{R}_{0},$};
+\node [block, align=center, below of=init, node distance=4cm] (predict) {\emph{Time update} \\[3mm] Compute \emph{a priori} estimate: \\ $\hat{\bm{x}}^{-}_k = \bm{\phi}_{k-1}(\bm{x}_{k-1}, \bm{u}_{k-1})$ \\ Compute Jacobian matrix: \\ $\bm{\Phi}^{[1]}_{k-1} =  \left. \frac{\partial \bm{\phi}_{k-1}(\bm{x}, \bm{u})}{\partial \bm{x}} \right|_{\bm{x}=\hat{\bm{x}}_{k-1}, \bm{u} = \bm{u}_{k-1}}$ \\ Compute \emph{a priori} error covariance: \\ $\bm{P}^-_{k} = \bm{\Phi}^{[1]}_{k-1} \bm{P}_{k-1} \bm{\Phi}^{[1]T}_{k-1} + \bm{Q}_{k-1}$};
+\node [block, align=center, below of=predict, node distance=5.8cm] (update) {\emph{Measurement update} \\[3mm] Compute Jacobian matrix: \\ $\bm{H}^{[1]}_{k} = \left. \frac{\partial \bm{h}_{k}(\bm{x})}{\partial \bm{x}} \right|_{\bm{x}=\hat{\bm{x}}_{k}}$ \\ Compute Kalman gain: \\ $\bm{K}_{k} = \bm{P}^-_k \bm{H}^{[1]T}_k[\bm{H}^{[1]}_k \bm{P}^-_k \bm{H}^{[1]T}_k + \bm{R}_k]^{-1}$ \\ Compute \emph{a posteriori} estimate: \\ $\hat{\bm{x}}_k = \hat{\bm{x}}^-_k + \bm{K}_{k}[\bm{z}_k-\bm{h}_{k}(\hat{\bm{x}}^-_k)]$ \\ Update error covariance: \\ $\bm{P}_{k} = [\bm{I}_n - \bm{K}_{k}\bm{H}^{[1]}_{k}]\bm{P}^-_{k}$};
+\node [output, below of=update, node distance=3.8cm, name=output] {Output};
+\node [output, below of=update, node distance=3.35cm, name=help1] {};
+\node [output, right of=help1, node distance=4.7cm, name=help2] {};
+\node [output, below of=init, node distance=1.23cm, name=help4] {};
+\node [output, right of=help4, node distance=4.7cm, name=help3] {};
+
+\draw [draw,-stealth, thick, align=left] (init) -- (predict);
+\draw [draw,-stealth, thick, align=left] (predict) -- (update);
+\draw [draw,-stealth, thick, align=left] (update) -- node [label={left:Output}]{} (output);
+\draw [draw,-stealth, thick] (help1) -- (help2) -- (help3) -- (help4);
+\end{tikzpicture}
+\caption{Operation cycle of the extended Kalman filter algorithm illustrating `predict and correct' behaviour.} \label{fig:extended_kalman_filter_cycle}
+\end{figure}
+
+Extended Kalman filtering is commonly used. In fact, it was the first successful application of the Kalman filter \cite{grewal2008kalman}. Unlike its linear counterpart, the extended Kalman filter may not necessarily be an optimal estimator. Owing to its linearisation the EKF may quickly diverge, if the process is modelled incorrectly or the initial state estimate is too imprecise.
+
+

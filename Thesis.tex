@@ -1,0 +1,71 @@
+
+% ******************************************************************
+% Master Thesis
+% ******************************************************************
+
+\NeedsTeXFormat{LaTeX2e}
+
+\documentclass[oneside, openright, titlepage, numbers=noenddot, headinclude, footinclude, cleardoublepage=empty, abstractoff, BCOR=5mm, paper=a4, fontsize=11pt, british, ngerman]{scrreprt}
+
+\usepackage[utf8]{inputenc}
+
+\input{Configuration}
+
+\addbibresource{Bibliography.bib}
+
+\makeatletter
+% \ifthenelse{\boolean{@drafting}}
+% {
+%   \renewcommand{\PrelimText}{}
+%   \renewcommand{\finalVersionString}{}
+% }
+% {}
+\makeatother
+
+\begin{document}
+\frenchspacing
+\raggedbottom
+\selectlanguage{british}
+\pagenumbering{roman}
+\pagestyle{plain}
+
+
+% ******************************************************************
+% Front Matter
+% ******************************************************************
+
+\include{FrontBackmatter/Titlepage}
+\include{FrontBackmatter/Titleback}
+\cleardoublepage\include{FrontBackmatter/Abstract}
+\cleardoublepage\include{FrontBackmatter/Preface}
+
+\pagestyle{scrheadings}
+\cleardoublepage\include{FrontBackmatter/Contents}
+
+% ******************************************************************
+% Main Matter
+% ******************************************************************
+
+\cleardoublepage\pagenumbering{arabic}
+\cleardoublepage
+
+\include{Chapters/Chapter01}
+\cleardoublepage
+
+\include{Chapters/Chapter02}
+\include{Chapters/Chapter03}
+\include{Chapters/Chapter04}
+\include{Chapters/Chapter05}
+
+% ******************************************************************
+% Back Matter
+% ******************************************************************
+
+\appendix
+\cleardoublepage
+\include{Chapters/Chapter0A}
+
+\cleardoublepage\include{FrontBackmatter/Bibliography}
+%\cleardoublepage\include{FrontBackmatter/Declaration}
+
+\end{document}
